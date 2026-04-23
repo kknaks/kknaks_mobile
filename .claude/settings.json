@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/Users/kknaks/git/**)",
+      "Edit(/Users/kknaks/git/**)",
+      "Write(/Users/kknaks/git/**)",
+      "Bash(*)"
+    ]
+  }
+}
