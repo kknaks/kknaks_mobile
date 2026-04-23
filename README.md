@@ -193,6 +193,7 @@ Claude가 응답에 `<send-file>/절대/경로</send-file>` 태그 포함 → Br
 | `!help` | 도움말 |
 | `!clear` | 현재 스레드 / DM 세션 리셋 |
 | `!resume` | 이 채널의 최근 세션 목록 (thread_key, session_id 앞자리, 첫 프롬프트 프리뷰) |
+| `!mode [quiet\|log]` | 출력 모드 조회/설정. `quiet`(기본): 최종 답변만. `log`: tool 호출 라인 표시. 채널 단위 저장. |
 
 ## 세션 동작
 

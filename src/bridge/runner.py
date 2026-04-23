@@ -86,6 +86,7 @@ class ClaudeRunner:
             full_prompt = f"{full_prompt}\n\n{attach_block}"
 
         session_id = await self.sessions.get(channel, thread_key)
+        mode = await self.sessions.get_mode(channel)
 
         placeholder = await slack_client.chat_postMessage(
             channel=channel,
@@ -184,12 +185,13 @@ class ClaudeRunner:
                         first_prompt=prompt,
                     )
                 elif event.type == "tool_use":
-                    timeline.append({
-                        "type": "tool",
-                        "name": event.tool_name or "?",
-                        "input": summarize_tool_input(event.tool_input),
-                    })
-                    await flush()
+                    if mode == "log":
+                        timeline.append({
+                            "type": "tool",
+                            "name": event.tool_name or "?",
+                            "input": summarize_tool_input(event.tool_input),
+                        })
+                        await flush()
                 elif event.type == "progress":
                     if event.total_tokens:
                         total_tokens = event.total_tokens
