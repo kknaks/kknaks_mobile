@@ -6,10 +6,13 @@ from .sessions import SessionStore
 
 COMMAND_PREFIX = "!"
 
+VALID_MODES = ("quiet", "log")
+
 HELP_TEXT = (
     "*사용 가능한 명령어*\n"
     "• `!clear` — 현재 대화 세션 초기화\n"
     "• `!resume` — 이 채널의 최근 세션 목록\n"
+    "• `!mode [quiet|log]` — 출력 모드 조회/설정 (기본 quiet, log는 tool 호출 표시)\n"
     "• `!help` — 이 도움말"
 )
 
@@ -60,6 +63,25 @@ class CommandHandler:
                     tk = s["thread_key"]
                     lines.append(f"• `{sid}` · _{when}_ · `{tk[:10]}` · {preview}")
                 text = "\n".join(lines)
+            await slack_client.chat_postMessage(
+                channel=channel, thread_ts=reply_thread_ts, text=text,
+            )
+            return True
+
+        if cmd == "mode":
+            if len(parts) < 2:
+                current = await self.sessions.get_mode(channel)
+                text = f"_현재 모드: `{current}`_ (옵션: {', '.join(f'`{m}`' for m in VALID_MODES)})"
+            else:
+                arg = parts[1].strip().lower()
+                if arg not in VALID_MODES:
+                    text = (
+                        f"⚠ 알 수 없는 모드 `{arg}`. "
+                        f"사용 가능: {', '.join(f'`{m}`' for m in VALID_MODES)}"
+                    )
+                else:
+                    await self.sessions.set_mode(channel, arg)
+                    text = f"✅ 모드 변경: `{arg}`"
             await slack_client.chat_postMessage(
                 channel=channel, thread_ts=reply_thread_ts, text=text,
             )

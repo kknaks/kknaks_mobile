@@ -24,6 +24,9 @@ class SessionStore:
     def _index_key(self, channel: str) -> str:
         return f"{self.namespace}:session_index:{channel}"
 
+    def _mode_key(self, channel: str) -> str:
+        return f"{self.namespace}:mode:{channel}"
+
     async def get(self, channel: str, thread_key: str) -> str | None:
         return await self.redis.get(self._session_key(channel, thread_key))
 
@@ -61,6 +64,13 @@ class SessionStore:
         pipe.zrem(self._index_key(channel), thread_key)
         results = await pipe.execute()
         return bool(results[0])
+
+    async def get_mode(self, channel: str) -> str:
+        val = await self.redis.get(self._mode_key(channel))
+        return val or "quiet"
+
+    async def set_mode(self, channel: str, mode: str) -> None:
+        await self.redis.set(self._mode_key(channel), mode)
 
     async def list_recent(
         self,
