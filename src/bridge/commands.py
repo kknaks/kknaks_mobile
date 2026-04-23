@@ -8,13 +8,31 @@ COMMAND_PREFIX = "!"
 
 VALID_MODES = ("quiet", "log")
 
+VALID_MODELS = ("opusm", "opus", "sonnet", "haiku")
+
+MODEL_ALIASES: dict[str, str] = {
+    "opusm": "claude-opus-4-7[1m]",
+}
+
 HELP_TEXT = (
     "*사용 가능한 명령어*\n"
     "• `!clear` — 현재 대화 세션 초기화\n"
     "• `!resume` — 이 채널의 최근 세션 목록\n"
     "• `!mode [quiet|log]` — 출력 모드 조회/설정 (기본 quiet, log는 tool 호출 표시)\n"
+    "• `!model [opusm|opus|sonnet|haiku|default]` — 모델 조회/설정 (default=시스템 기본값)\n"
     "• `!help` — 이 도움말"
 )
+
+
+def resolve_model(alias: str | None) -> str | None:
+    """Map a bridge alias to the model ID passed to Claude Code CLI.
+
+    None → use system default. Unknown aliases pass through unchanged
+    (defensive: shouldn't happen since !model validates).
+    """
+    if not alias:
+        return None
+    return MODEL_ALIASES.get(alias, alias)
 
 
 class CommandHandler:
@@ -87,10 +105,41 @@ class CommandHandler:
             )
             return True
 
+        if cmd == "model":
+            if len(parts) < 2:
+                current = await self.sessions.get_model(channel)
+                label = f"`{current}`" if current else "`default` _(시스템 기본값)_"
+                text = (
+                    f"_현재 모델: {label}_ "
+                    f"(옵션: {', '.join(f'`{m}`' for m in VALID_MODELS)}, `default`)"
+                )
+            else:
+                arg = parts[1].strip().lower()
+                if arg == "default":
+                    await self.sessions.delete_model(channel)
+                    text = "✅ 모델: `default` _(시스템 기본값)_"
+                elif arg not in VALID_MODELS:
+                    text = (
+                        f"⚠ 알 수 없는 모델 `{arg}`. "
+                        f"사용 가능: {', '.join(f'`{m}`' for m in VALID_MODELS)}, `default`"
+                    )
+                else:
+                    await self.sessions.set_model(channel, arg)
+                    text = f"✅ 모델 변경: `{arg}`"
+            await slack_client.chat_postMessage(
+                channel=channel, thread_ts=reply_thread_ts, text=text,
+            )
+            return True
+
         if cmd == "help":
             await slack_client.chat_postMessage(
                 channel=channel, thread_ts=reply_thread_ts, text=HELP_TEXT,
             )
             return True
 
-        return False
+        await slack_client.chat_postMessage(
+            channel=channel,
+            thread_ts=reply_thread_ts,
+            text=f"⚠ 알 수 없는 명령어 `!{cmd}`. `!help` 로 사용 가능한 명령 확인",
+        )
+        return True

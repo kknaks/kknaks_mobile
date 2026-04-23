@@ -7,6 +7,7 @@ from typing import Any
 from open_kknaks import ClaudeClient
 from slack_sdk.web.async_client import AsyncWebClient
 
+from .commands import resolve_model
 from .files import SEND_FILE_RE
 from .sessions import SessionStore
 
@@ -87,6 +88,7 @@ class ClaudeRunner:
 
         session_id = await self.sessions.get(channel, thread_key)
         mode = await self.sessions.get_mode(channel)
+        model = resolve_model(await self.sessions.get_model(channel))
 
         placeholder = await slack_client.chat_postMessage(
             channel=channel,
@@ -98,6 +100,7 @@ class ClaudeRunner:
         task_id = await self.client.submit(
             full_prompt,
             session_id=session_id,
+            model=model,
             append_system_prompt=FILE_SEND_INSTRUCTION,
             add_dirs=self.extra_dirs or None,
         )
