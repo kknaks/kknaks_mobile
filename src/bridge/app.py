@@ -28,6 +28,26 @@ async def create_app(
     bot_mention_tag = f"<@{bot_user_id}>"
     logger.info("bot user id: %s", bot_user_id)
 
+    allowed_users: set[str] = {
+        u.strip()
+        for u in os.environ.get("ALLOWED_SLACK_USERS", "").split(",")
+        if u.strip()
+    }
+    if allowed_users:
+        logger.info("allowed slack users: %s", sorted(allowed_users))
+    else:
+        logger.warning(
+            "ALLOWED_SLACK_USERS is empty — all incoming messages will be ignored. "
+            "Set it in .env (comma-separated user IDs, e.g. U0123,U0456)."
+        )
+
+    def _authorized(event: dict) -> bool:
+        user = event.get("user")
+        if user in allowed_users:
+            return True
+        logger.info("ignoring message from unauthorized user: %s", user)
+        return False
+
     async def collect_attachments(event: dict) -> list[str]:
         files = event.get("files") or []
         paths: list[str] = []
@@ -79,6 +99,8 @@ async def create_app(
 
     @app.event("app_mention")
     async def on_mention(event, client, logger):
+        if not _authorized(event):
+            return
         channel = event["channel"]
         thread_ts = event.get("thread_ts") or event["ts"]
         logger.info("mention channel=%s thread=%s", channel, thread_ts)
@@ -100,6 +122,8 @@ async def create_app(
             return
         subtype = event.get("subtype")
         if subtype not in _ALLOWED_SUBTYPES:
+            return
+        if not _authorized(event):
             return
 
         channel = event["channel"]

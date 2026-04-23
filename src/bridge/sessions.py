@@ -27,6 +27,9 @@ class SessionStore:
     def _mode_key(self, channel: str) -> str:
         return f"{self.namespace}:mode:{channel}"
 
+    def _model_key(self, channel: str) -> str:
+        return f"{self.namespace}:model:{channel}"
+
     async def get(self, channel: str, thread_key: str) -> str | None:
         return await self.redis.get(self._session_key(channel, thread_key))
 
@@ -71,6 +74,15 @@ class SessionStore:
 
     async def set_mode(self, channel: str, mode: str) -> None:
         await self.redis.set(self._mode_key(channel), mode)
+
+    async def get_model(self, channel: str) -> str | None:
+        return await self.redis.get(self._model_key(channel))
+
+    async def set_model(self, channel: str, model: str) -> None:
+        await self.redis.set(self._model_key(channel), model)
+
+    async def delete_model(self, channel: str) -> None:
+        await self.redis.delete(self._model_key(channel))
 
     async def list_recent(
         self,
